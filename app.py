@@ -18,6 +18,32 @@ DB_CONFIG = {
     'port': int(os.getenv('DB_PORT', 3306))
 }
 
+def init_db():
+    try:
+        print("Menghubungkan ke database untuk inisialisasi...")
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+        
+        # Buat tabel jika belum ada
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS history_scan (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                url_link VARCHAR(500) NOT NULL,
+                status_keamanan VARCHAR(50) NOT NULL,
+                ip_pengguna VARCHAR(50) NOT NULL,
+                tanggal_scan TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print("Database siap!")
+    except Exception as e:
+        print(f"Gagal menginisialisasi database: {e}")
+
+# Inisialisasi DB saat aplikasi pertama kali dijalankan
+init_db()
+
 # Fungsi cek URL ke VirusTotal
 def check_virustotal(url_to_scan):
     try:
