@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request, jsonify
-import mysql.connector
 import requests
 import base64
 import os
@@ -13,39 +12,6 @@ app = Flask(__name__)
 # Jika tidak ada (saat berjalan di laptop/XAMPP lokal), gunakan defaultnya
 VT_API_KEY = os.getenv('VT_API_KEY', '6a16546d675daf22914fafabf00aa2b3bddbe76c0eb9af19e2c6dd319adf7e83')
 
-DB_CONFIG = {
-    'host': os.getenv('DB_HOST', 'localhost'),
-    'user': os.getenv('DB_USER', 'root'),
-    'password': os.getenv('DB_PASSWORD', ''),
-    'database': os.getenv('DB_NAME', 'safescan_db'),
-    'port': int(os.getenv('DB_PORT', 3306))
-}
-
-def init_db():
-    try:
-        print("Menghubungkan ke database untuk inisialisasi...")
-        conn = mysql.connector.connect(**DB_CONFIG)
-        cursor = conn.cursor()
-        
-        # Buat tabel jika belum ada
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS history_scan (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                url_link VARCHAR(500) NOT NULL,
-                status_keamanan VARCHAR(50) NOT NULL,
-                ip_pengguna VARCHAR(50) NOT NULL,
-                tanggal_scan TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        conn.commit()
-        cursor.close()
-        conn.close()
-        print("Database siap!")
-    except Exception as e:
-        print(f"Gagal menginisialisasi database: {e}")
-
-# Inisialisasi DB saat aplikasi pertama kali dijalankan
-init_db()
 
 # Fungsi cek URL ke VirusTotal
 def check_virustotal(url_to_scan):
@@ -96,17 +62,7 @@ def scan_api():
     # 1. Cek Keamanan
     status = check_virustotal(url_link)
 
-    # 2. Simpan ke Database
-    try:
-        conn = mysql.connector.connect(**DB_CONFIG)
-        cursor = conn.cursor()
-        sql = "INSERT INTO history_scan (url_link, status_keamanan, ip_pengguna) VALUES (%s, %s, %s)"
-        cursor.execute(sql, (url_link, status, ip_addr))
-        conn.commit()
-        cursor.close()
-        conn.close()
-    except Exception as e:
-        print(f"Error Database: {e}")
+
 
     # 3. Kirim hasil balik ke HP
     return jsonify({'status': status, 'url': url_link})
