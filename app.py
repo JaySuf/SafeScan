@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify
+import mysql.connector
 import requests
 import base64
 import os
@@ -9,8 +10,13 @@ app = Flask(__name__)
 # Jika tidak ada (saat berjalan di laptop/XAMPP lokal), gunakan defaultnya
 VT_API_KEY = os.getenv('VT_API_KEY', '6a16546d675daf22914fafabf00aa2b3bddbe76c0eb9af19e2c6dd319adf7e83')
 
-# URL Webhook Google Apps Script
-SPREADSHEET_WEBHOOK_URL = os.getenv('SPREADSHEET_WEBHOOK_URL', '')
+DB_CONFIG = {
+    'host': os.getenv('DB_HOST', 'localhost'),
+    'user': os.getenv('DB_USER', 'root'),
+    'password': os.getenv('DB_PASSWORD', ''),
+    'database': os.getenv('DB_NAME', 'safescan_db'),
+    'port': int(os.getenv('DB_PORT', 3306))
+}
 
 # Fungsi cek URL ke VirusTotal
 def check_virustotal(url_to_scan):
@@ -54,21 +60,17 @@ def scan_api():
     # 1. Cek Keamanan
     status = check_virustotal(url_link)
 
-    # 2. Simpan ke Google Sheets via Webhook
-    if SPREADSHEET_WEBHOOK_URL:
-        try:
-            payload = {
-                "url": url_link,
-                "status": status,
-                "ip": ip_addr
-            }
-            # Kirim request POST ke Webhook Google Apps Script
-            requests.post(SPREADSHEET_WEBHOOK_URL, json=payload)
-            print(f"Berhasil dikirim ke Google Sheets: {url_link}")
-        except Exception as e:
-            print(f"Error mengirim ke Google Sheets: {e}")
-    else:
-        print("SPREADSHEET_WEBHOOK_URL belum diseting.")
+    # 2. Simpan ke Database
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+        sql = "INSERT INTO history_scan (url_link, status_keamanan, ip_pengguna) VALUES (%s, %s, %s)"
+        cursor.execute(sql, (url_link, status, ip_addr))
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        print(f"Error Database: {e}")
 
     # 3. Kirim hasil balik ke HP
     return jsonify({'status': status, 'url': url_link})
