@@ -3,6 +3,9 @@ import mysql.connector
 import requests
 import base64
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -79,7 +82,11 @@ def index():
 def scan_api():
     data = request.json
     url_link = data.get('url')
-    ip_addr = request.remote_addr # Ambil IP HP pengguna
+    # Ambil IP HP pengguna (Mendukung proxy/Vercel)
+    ip_addr = request.headers.get('X-Forwarded-For', request.remote_addr)
+    if not ip_addr:
+        ip_addr = 'Unknown IP'
+    ip_addr = ip_addr.split(',')[0].strip()
 
     print(f"Menerima Scan: {url_link} dari {ip_addr}")
 
