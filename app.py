@@ -82,6 +82,9 @@ def index():
 def scan_api():
     data = request.json
     url_link = data.get('url')
+    if not url_link:
+        return jsonify({'error': 'URL tidak valid'}), 400
+        
     # Ambil IP HP pengguna (Mendukung proxy/Vercel)
     ip_addr = request.headers.get('X-Forwarded-For', request.remote_addr)
     if not ip_addr:
